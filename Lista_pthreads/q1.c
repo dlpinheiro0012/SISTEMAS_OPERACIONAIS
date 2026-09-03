@@ -1,106 +1,126 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <pthread.h>
+#include <stdlib.h>
 
-#define N 10 // Número de threads;
-#define NUM_ARRAY 10000 // Número de elementos do vetor;
+//Valores que podem ser alterados
+#define VET_SIZE 10000 //Tamanho fixo do vetor numérico
+#define NUM_THREADS 11 //Quantidade de Threads que serão usadas
 
-typedef struct{
-    int pos_init;
+
+//Devemos separar o vetor com um escalonador que irá dividi-lo em tamanhos iguais e passará os subarrays para as threads
+typedef struct {
+    int id_thread;
+    int posicao_inicial;
     int partition;
-    int* data;
-    int partial;
+    int* vetor_numerico;
+    int soma_parcial;
 } _subarray;
 
-void* Sum(void* subarray){
-    _subarray* array = (_subarray*) subarray;
-    int pos_init = array->pos_init;
+//funcao que cada thread irá efetuar
+void* sum(void* subarray) {
+    _subarray *array = (_subarray*) subarray;
+    int posicao_inicial = array->posicao_inicial;
     int partition = array->partition;
 
-    for (int j = pos_init; j < (pos_init + partition); j++){
-        array->partial += array->data[j];
+    for (int i=posicao_inicial; i < (partition+posicao_inicial); i++) {
+        array->soma_parcial += array->vetor_numerico[i];
     }
+    printf("Soma Parcial : %d\n",array->soma_parcial);
 
     pthread_exit((void*) array);
 }
 
-int* SetToZero(int* array){
-    for (int i = 0; i < NUM_ARRAY; i++){
-        array[i] = rand()% 4;
-    }
+//Função que irá dividir o vetor numérico em subarrays e separá-los para que cada uma das threads possa efetuar a soma sob os valores selecionados
+//basicamente irá retornar um vetor de escalonador que indica quantos termos terão na thread [i]
+int* escalonador(int vetor_size, int n_threads) {
+    int particao = vetor_size / n_threads; // particao de quantos termos teremos dentro de cada subarray
+    int resto = vetor_size % n_threads; // quando tivermos uma divisão nao inteira, direcionamos os "resto" valores para as threads até acabar
+    int i=0;
 
-    return array;
-}
+    int * escalonador = NULL; //inciando o ponteiro como nulo 
+    escalonador = (int*)malloc(n_threads * sizeof(int)); //alocamos memória com a quantidade de threads
 
-//No Scheduler, vamos designar para cada uma das threads quantos elementos elas vão processar;
-int* Scheduler(int num_array, int n){ 
-    float partition = num_array / n;
-    int i = 0;
-    int nat_partition = partition;
-
-    int* schedule = NULL;
-
-    if (!(schedule = (int*) malloc(n * sizeof(int)))){
-        printf("Erro de alocação de memória no scheduler!\n");
+    if (!escalonador) {
+        printf("Erro ao alocar memória para o escalonador");
         return NULL;
     }
 
-    while (i < n){
-        if ((i == (n - 1))) schedule[i] = nat_partition + (num_array % n);
-        else schedule[i] = nat_partition;
+    while ( i < n_threads ) {
+        escalonador[i] = particao;
 
+        if (resto > 0) {
+            escalonador[i]++;
+            resto--;
+        }
         i++;
     }
 
-    return schedule;
+    return escalonador;
+
 }
 
-int main(){
-    pthread_t thread_list[N];
+//Funçao apenas para alimentar o vetor numérico com a quantidade que quiser
+int* alimentarArray(int* vetor_numerico) {
+    for (int k=0; k < VET_SIZE; k++) {
+        vetor_numerico[k] = 1; //setando todos os termos como 1; o resultado final será o próprio tamanho do vetor ( VET_SIZE )
+    }
+
+    return vetor_numerico;
+}
+
+int main() {
     int rc;
-    int* numeric_array = NULL;
-    int pos = 0;
-    int* schedule = Scheduler(NUM_ARRAY, N);
-    int part_results[N];
-    int total = 0;
-    _subarray __subarray[N];
+    int posicao=0;
+    int soma_total = 0;
+    int* separador = escalonador(VET_SIZE,NUM_THREADS);
+    _subarray subarray[NUM_THREADS];
+    pthread_t lista_threads[NUM_THREADS];
 
-    if (!(numeric_array = (int*) malloc(NUM_ARRAY * sizeof(int)))){
-        printf("Erro de alocação de memória para array numérica!\n");
-        exit(1);
+    int* vetor_numerico = NULL;
+
+    vetor_numerico = (int*)malloc(VET_SIZE * sizeof(int));
+    if (!vetor_numerico || !separador) {
+        printf("Erro ao inicializar ponteiros na main");
+        return(-1);
     }
 
-    numeric_array = SetToZero(numeric_array);
 
-    for (int i = 0; i < N; i++){ //mudar i para N
-        __subarray[i].data = numeric_array;
-        __subarray[i].partition = schedule[i];
-        __subarray[i].pos_init = pos;
-        __subarray[i].partial = 0;
+    vetor_numerico = alimentarArray(vetor_numerico);
 
-        rc = pthread_create(&thread_list[i], NULL, Sum, (void*) &__subarray[i]);
-        if (rc){
-            printf("Erro de criação da thread; Código de erro: %d\n", rc);
-            exit(1);
+    //agora, iremos alimentar cada um dos subarrays e criar as threads que executarão na função sum
+    for (int i=0;i < NUM_THREADS; i++) {
+        subarray[i].id_thread = i+1;
+        subarray[i].posicao_inicial = posicao;
+        subarray[i].partition = separador[i];
+        subarray[i].vetor_numerico = vetor_numerico;
+        subarray[i].soma_parcial = 0;
+
+        rc = pthread_create((&lista_threads[i]), NULL, sum, (void*) &subarray[i]);
+
+        if (rc) {
+            printf("Erro de criacao de thread");
+            return(-1);
         }
 
-        pos += schedule[i];
+        posicao += separador[i];
     }
 
-    for (int j = 0; j < N; j++){ //MUDAR J PARA N
-        _subarray* _array;
-        
-        rc = pthread_join(thread_list[j], (void**) &_array);
-        if (rc){
-            printf("Erro de join da thread; Código de erro: %d\n", rc);
-            exit(1);
+    //agora, efetuando a soma das partições parciais para a soma total final
+    for (int i=0; i< NUM_THREADS; i++) {
+
+        rc = pthread_join(lista_threads[i], NULL);
+        if(rc) {
+            printf("Erro no join das threads");
+            return(-1);
         }
 
-        total += _array->partial;
+        soma_total += subarray[i].soma_parcial;
     }
 
-    free(numeric_array);
-    free(schedule);
+    free(vetor_numerico);
+    free(separador);
 
-    printf("Total: %d\n", total);
+    printf("Soma Total: %d\n", soma_total);
+
+    return 0;
 }
