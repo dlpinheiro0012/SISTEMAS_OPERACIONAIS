@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 //Valores que podem ser alterados
-#define VET_SIZE 10000 //Tamanho fixo do vetor numérico
+#define VET_SIZE 102//Tamanho fixo do vetor numérico
 #define NUM_THREADS 11 //Quantidade de Threads que serão usadas
 
 
@@ -69,16 +69,18 @@ int* alimentarArray(int* vetor_numerico) {
 }
 
 int main() {
-    int rc;
-    int posicao=0;
-    int soma_total = 0;
-    int* separador = escalonador(VET_SIZE,NUM_THREADS);
     _subarray subarray[NUM_THREADS];
     pthread_t lista_threads[NUM_THREADS];
 
+    int rc;
+    int posicao_inicial_atual=0;
+    int soma_total = 0;
+    int* separador = NULL;
     int* vetor_numerico = NULL;
 
+    separador = escalonador(VET_SIZE,NUM_THREADS);
     vetor_numerico = (int*)malloc(VET_SIZE * sizeof(int));
+
     if (!vetor_numerico || !separador) {
         printf("Erro ao inicializar ponteiros na main");
         return(-1);
@@ -90,7 +92,7 @@ int main() {
     //agora, iremos alimentar cada um dos subarrays e criar as threads que executarão na função sum
     for (int i=0;i < NUM_THREADS; i++) {
         subarray[i].id_thread = i+1;
-        subarray[i].posicao_inicial = posicao;
+        subarray[i].posicao_inicial = posicao_inicial_atual;
         subarray[i].partition = separador[i];
         subarray[i].vetor_numerico = vetor_numerico;
         subarray[i].soma_parcial = 0;
@@ -102,7 +104,7 @@ int main() {
             return(-1);
         }
 
-        posicao += separador[i];
+        posicao_inicial_atual += separador[i];
     }
 
     //agora, efetuando a soma das partições parciais para a soma total final
