@@ -11,7 +11,7 @@
 typedef struct {
     int id_thread;
     int posicao_inicial;
-    int partition;
+    int qtd_particao;
     int* vetor_numerico;
     int soma_parcial;
 } _subarray;
@@ -20,9 +20,9 @@ typedef struct {
 void* sum(void* subarray) {
     _subarray *array = (_subarray*) subarray;
     int posicao_inicial = array->posicao_inicial;
-    int partition = array->partition;
+    int qtd_particao = array->qtd_particao;
 
-    for (int i=posicao_inicial; i < (partition+posicao_inicial); i++) {
+    for (int i = posicao_inicial; i < (qtd_particao + posicao_inicial); i++) {
         array->soma_parcial += array->vetor_numerico[i];
     }
     printf("Soma Parcial : %d\n",array->soma_parcial);
@@ -93,15 +93,15 @@ int main() {
     for (int i=0;i < NUM_THREADS; i++) {
         subarray[i].id_thread = i+1;
         subarray[i].posicao_inicial = posicao_inicial_atual;
-        subarray[i].partition = separador[i];
+        subarray[i].qtd_particao = separador[i];
         subarray[i].vetor_numerico = vetor_numerico;
         subarray[i].soma_parcial = 0;
 
         rc = pthread_create((&lista_threads[i]), NULL, sum, (void*) &subarray[i]);
 
-        if (rc) {
+        if (rc != 0) {
             printf("Erro de criacao de thread");
-            return(-1);
+            exit(-1);
         }
 
         posicao_inicial_atual += separador[i];
@@ -111,7 +111,7 @@ int main() {
     for (int i=0; i< NUM_THREADS; i++) {
 
         rc = pthread_join(lista_threads[i], NULL);
-        if(rc) {
+        if(rc != 0) {
             printf("Erro no join das threads");
             return(-1);
         }
