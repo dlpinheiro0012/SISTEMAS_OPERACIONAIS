@@ -15,41 +15,37 @@ precisamos ter mutex para as mesmas linhas não serem acessadas ao mesmo tempo (
 
 //declarando e inicializando vetores de forma global 
 pthread_mutex_t mutex_consultorio[NUM_CONSU];
+pthread_cond_t _vetor_cond[NUM_CONSU];
+int termino_linha = 0;
 
 void init_mutexes() {
-    for ( int idx=1 ; idx <= NUM_CONSU ; idx++)  pthread_mutex_init(&mutex_consultorio[idx], NULL); 
+    for ( int idx = 0 ; idx < NUM_CONSU ; idx++) {
+        pthread_mutex_init(&mutex_consultorio[idx], NULL); 
+        pthread_cond_init(&_vetor_cond[idx], NULL);
+    } 
 }
 
-void init_consultorio() {
-
-    FILE * f0 = fopen("pacientes_q2/pacientes_iniciais.txt", "w");
-
-    if ( f0 == NULL) {
-        printf("Erro ao criar Arquivo de pacientes\n");
-        exit(1);
+void destroy_mutex() {
+    for ( int idx = 0; idx < NUM_CONSU ; idx++) {
+        pthread_mutex_destroy(&mutex_consultorio[idx]);
+        pthread_mutex_destroy(&_vetor_cond[idx]);
     }
-
-    for (int i=0 ; i < NUM_CONSU; i++) {
-        fprintf(f0,"LIVRE consultório %i\n",(i+1));
-    }
-
-    fclose(f0);
 }
 
-int coletar_nome_consultorio(char * linha, char * nome, int * consultorio) {
-
-    int validade = sscanf( linha, "%49s %i", nome, consultorio);
-
-    return validade;
+void create_consultorios() { // NAO ESTA FUNCIONANDO
+    for (int i=0; i <6;i++) {
+        int cor = i+1;
+        printf("\033[%d;1H\033[4%dm Paciente LIVRE  Consultório %i", cor, i);
+    }
 }
 
 typedef struct thread_file {
     int id; // id da thread
-    char *file; // declarando ponteiro pelo qual a thread irá ler o seu N arquivo
-} thread_n;
+    char *file; // declarando ponteiro pelo qual a thread irá ler o seu arquivo específico
+} rotina;
 
 void* executar_thread( void* thread ) {
-    thread_n *data = (thread_n*) thread;
+    rotina *data = (rotina*) thread;
 
     FILE * f = fopen(data->file, "r");
 
@@ -64,7 +60,7 @@ void* executar_thread( void* thread ) {
 
     while( fgets(linha, sizeof(linha), f) != NULL ) {
 
-        int validade = coletar_nome_consultorio(linha,nome, &consultorio);
+        int validade = sscanf( linha, "%49s %i", nome, &consultorio);
 
         if (validade != 2) {
             printf("Erro ao coletar nome / consultorio do paciente");
@@ -75,15 +71,21 @@ void* executar_thread( void* thread ) {
 
         pthread_mutex_lock(&mutex_consultorio[idx_linha]); // Lock na linha do consultorio
 
-        printf("\033[%i;1H\033[4%im\033[2K+Paciente %s  Consultório %i", consultorio, idx_linha, nome, consultorio);
-        printf("\033[0m"); //Reset na cor de fundo
+        if (!termino_linha) { //VERIFICAR AQUI O SINAL PARA OS MUTEXES
+            pthread_cond_wait(&_vetor_cond[idx_linha],&mutex_consultorio[idx_linha]); //sinal de aguardo para o mutex da linha
 
-        fflush(stdout); // Função usada para que a biblioteca não guardar as modificações antes de mandar para a tela
+            printf("\033[%i;1H\033[4%im\033[2K+Paciente %s  Consultório %i", consultorio, idx_linha, nome, consultorio); // NAO ESTA FUNCIONANDO
+            printf("\033[0m"); //Reset na cor de fundo
 
-        sleep(3); //Garantindo a espera por 3 segundos
+            fflush(stdout); // Função usada para que a biblioteca não guarde as modificações antes de mandar para a tela
+
+            sleep(3); //Garantindo a espera por 3 segundos
+            
+            termino_linha = 1;
+        }
 
         pthread_mutex_unlock(&mutex_consultorio[idx_linha]);
-
+    
         idx_linha++;
     }
 
@@ -93,8 +95,6 @@ void* executar_thread( void* thread ) {
 }
 
 int main() {
-    init_mutexes();
-    init_consultorio();
-
+    create_consultorios();
     return 0;
 }

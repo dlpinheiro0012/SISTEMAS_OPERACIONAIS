@@ -85,8 +85,7 @@ int main() {
         printf("Erro ao inicializar ponteiros na main");
         return(-1);
     }
-
-
+    
     vetor_numerico = alimentarArray(vetor_numerico);
 
     //agora, iremos alimentar cada um dos subarrays e criar as threads que executarão na função sum
