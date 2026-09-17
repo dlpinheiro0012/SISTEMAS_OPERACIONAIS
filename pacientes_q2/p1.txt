@@ -1,4 +1,0 @@
-Jaco 6
-Atlas 3
-Euler 3
-Dudu 1
