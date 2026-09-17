@@ -36,9 +36,10 @@ void create_consultorios() {
     for (int i=0; i <= NUM_CONSU ;i++) {
         cor = i+1;
         consultorio = cor; // sao indexados da mesma forma
-        printf("\033[%d;1H\033[4%dm LIVRE Consultorio %i", cor, i, consultorio);
+        printf("\033[%d;1H\033[4%dm LIVRE Consultorio %i\n", cor, i, consultorio);
     }
-    printf("\033[0m"); //Reset na cor de fundo
+
+    sleep(3);
 }
 
 typedef struct thread_file {
@@ -73,8 +74,7 @@ void* executar_thread( void* thread ) {
 
         pthread_mutex_lock(&mutex_consultorio[idx_linha]); // Lock na linha do consultorio
 
-        printf("\033[%i;1H\033[4%im\033[2K Paciente %s Consultorio %i", consultorio, idx_linha, nome, consultorio); // 
-        printf("\033[0m"); //Reset na cor de fundo
+        printf("\033[%i;1H\033[4%im\033[2K Paciente %s Consultorio %i\n\033[0m", consultorio, idx_linha, nome, consultorio);
 
         sleep(3); //Garantindo a espera por 3 segundos
 
