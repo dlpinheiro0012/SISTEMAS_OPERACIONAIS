@@ -18,18 +18,44 @@
 #define N 5
 #define M 5
 
+int ne=0;
+int nl=0;
+
 pthread_mutex_t mutex;
+pthread_cond_t escritores;
+pthread_cond_t leitores;
+
 int array_mexidon[20] = {0};
 
 int numero_loko()
 {
-    return (rand() % 20) + 1;
+    return (rand() % 20);
 }
 
 void* leitura(void* arg)
 {
-    array_mexidon[numero_loko()] = numero_loko()+ 50;
-    printf("Lendo\n");
+    pthread_mutex_lock(&mutex);
+    while(ne > 0) {
+        pthread_cond_wait(&leitores, &mutex);
+    }
+    nl++;
+    pthread_mutex_unlock(&mutex);
+
+    int* lidon = malloc(sizeof(int));
+    
+    *lidon = array_mexidon[numero_loko()];
+
+    pthread_mutex_lock(&mutex);
+
+    nl--;
+
+    if(nl == 0) {
+        pthread_cond_signal(&escritores);
+    }
+
+    pthread_mutex_unlock(&mutex);
+
+    return (void*) lidon;
 
 }
 
@@ -37,16 +63,33 @@ void* escrita(void* arg)
 {
     pthread_mutex_lock(&mutex);
 
-    array_mexidon[numero_loko()] = numero_loko()+ 50;
-    printf("Escrevendo\n");
+    while(nl > 0 || ne > 0) {
+        pthread_cond_wait(&escritores, &mutex);
+    } 
+    ne++;
 
     pthread_mutex_unlock(&mutex);
+
+    array_mexidon[numero_loko()] = numero_loko()+ 50;
+
+    pthread_mutex_lock(&mutex);
+
+    ne--;
+
+    pthread_cond_signal(&escritores);
+    pthread_cond_broadcast(&leitores);
+
+    pthread_mutex_unlock(&mutex);
+
 }
+
 
 
 
 int main() {
     srand(time(NULL));
+
+    int* lido;
 
     pthread_t array_threads[100], array_threads2[100];
     pthread_mutex_init(&mutex, NULL);
@@ -54,35 +97,45 @@ int main() {
     int i;
     while(1)
     {
-        for(i=0; i<N; i++)
+        for(i=0; i<N; i++)//ler
         {
             if(pthread_create(array_threads + i, NULL, &leitura, NULL)!=0)
             {
                 return 1;
             }
         }
-        for(i=0; i<M; i++)
+        for(i=0; i<M; i++)//escrever
         {
             if(pthread_create(array_threads2 + i, NULL, &escrita, NULL)!=0)
             {
                 return 1;
             }
         }
-        for(i=0; i<N; i++)
+        for(i=0; i<N; i++)//fim ler
         {
-            if(pthread_join(array_threads[i], NULL)!=0)
+            if(pthread_join(array_threads[i], (void**) &lido)!=0)
             {
                 return 1;
             }
+
+            printf("\nLido: %d", *lido);
+            free(lido);
         }
-        for(i=0; i<M; i++)
+        for(i=0; i<M; i++)//fim escrever
         {
             if(pthread_join(array_threads2[i], NULL)!=0)
             {
                 return 1;
             }
         }
-        pthread_mutex_destroy(&mutex);
+
+        printf("\nArray mexidon: ");
+        for(i=0; i<20; i++) 
+        {
+            printf("%d ", array_mexidon[i]);
+        }
     }   
+    
+    pthread_mutex_destroy(&mutex);
     return 0;
 }
