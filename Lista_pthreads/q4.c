@@ -6,7 +6,7 @@
 #define NUM_INCOGNITAS 10
 #define NUM_THREADS 4
 
-int vet_X[NUM_INCOGNITAS];
+int vet_X[NUM_INCOGNITAS] = {1};
 int vet_coef[NUM_INCOGNITAS][NUM_INCOGNITAS]; 
 int vet_result[NUM_INCOGNITAS] = {0};
 
@@ -24,12 +24,7 @@ double somatorio_jacobi(int ** vet_coeficientes, int * vet_x_past ) {
     return soma;
 }
 
-void init_vetores() {
-
-    //cada incognita como 1
-    for( int i = 0 ; i < NUM_INCOGNITAS; i++) {
-        vet_X[i] = 1;
-    }
+void init_vet_coef() {
 
     //cada coef como i+j
     for( int i=0 ; i, NUM_INCOGNITAS; i++) {
@@ -40,12 +35,10 @@ void init_vetores() {
             vet_coef[i][k] = i+k;
         }
     }
-
-    
 }
 
 int main() {
-    init_vetores();
+    init_vet_coef();
     
     return 0;
 }
