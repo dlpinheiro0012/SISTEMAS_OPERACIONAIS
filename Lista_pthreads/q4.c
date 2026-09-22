@@ -10,6 +10,14 @@ double vet_X[NUM_INCOGNITAS] = {1.0};
 int vet_coef[NUM_INCOGNITAS][NUM_INCOGNITAS]; 
 double vet_result[NUM_INCOGNITAS] = {1.0};
 
+pthread_barrier_t barreira;
+pthread_t threads[NUM_THREADS];
+
+typedef struct {
+    int id;
+    int* subarray_x;
+} thread;
+
 
 double * somatorio_jacobi(int vet_coeficientes[NUM_INCOGNITAS][NUM_INCOGNITAS], double * vet_x_past , double* vet_x_new) {
 
@@ -26,6 +34,37 @@ double * somatorio_jacobi(int vet_coeficientes[NUM_INCOGNITAS][NUM_INCOGNITAS], 
         }
 
     return vet_x_new;
+}
+
+void escalonador( thread * thread_[NUM_THREADS]) {
+    int particao = NUM_INCOGNITAS/ NUM_THREADS; // particao de quantos termos teremos dentro de cada subarray
+    int resto = NUM_INCOGNITAS % NUM_THREADS; // quando tivermos uma divisão nao inteira, direcionamos os "resto" valores para as threads até acabar
+    int k=0;
+    int i = 0;
+
+    for ( ; i<NUM_THREADS; i ++) {
+        int j =0;
+        thread_[i]->subarray_x = NULL;
+        thread_[i]->subarray_x = (int*)malloc(particao * sizeof(int));
+
+        if (thread_[i]->subarray_x == NULL) {
+            printf("Erro ao alocar memória para o escalonador");
+            return(-1);
+        }
+        for ( ; k<particao; k++){
+            thread_[i]->subarray_x[j] = 0 ; //setei como 0 mas tá errado, so nao tava conseguindo achar o que colocar, é o sono
+        }
+    }
+
+    if (resto) {
+        i = 0;
+        while (!resto) {
+            if (i >=NUM_THREADS) i = 0;
+
+            resto--;
+        }
+
+    }
 }
 
 void * executar_thread(void* funcao) {
@@ -47,6 +86,10 @@ void init_vet_coef() {
 
 int main() {
     init_vet_coef();
-    
+
+    pthread_barrier_init(&barreira, NULL, NUM_THREADS);
+
+    pthread_barrier_destroy(&barreira);
+
     return 0;
 }
