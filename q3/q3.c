@@ -25,9 +25,9 @@ pthread_mutex_t mutex;
 pthread_cond_t escritores;
 pthread_cond_t leitores;
 
-int array_mexidon[20] = {0};
+int array_generico[20] = {0};
 
-int numero_loko()
+int gerador_num_aleatorio()
 {
     return (rand() % 20);
 }
@@ -41,9 +41,9 @@ void* leitura(void* arg)
     nl++;
     pthread_mutex_unlock(&mutex);
 
-    int* lidon = malloc(sizeof(int));
+    int* lido_1 = malloc(sizeof(int));
     
-    *lidon = array_mexidon[numero_loko()];
+    *lido_1 = array_generico[gerador_num_aleatorio()];
 
     pthread_mutex_lock(&mutex);
 
@@ -55,7 +55,7 @@ void* leitura(void* arg)
 
     pthread_mutex_unlock(&mutex);
 
-    return (void*) lidon;
+    return (void*) lido_1;
 
 }
 
@@ -70,7 +70,7 @@ void* escrita(void* arg)
 
     pthread_mutex_unlock(&mutex);
 
-    array_mexidon[numero_loko()] = numero_loko()+ 50;
+    array_generico[gerador_num_aleatorio()] = gerador_num_aleatorio()+ 50;
 
     pthread_mutex_lock(&mutex);
 
@@ -129,10 +129,10 @@ int main() {
             }
         }
 
-        printf("\nArray mexidon: ");
+        printf("\nArray Atualmente: ");
         for(i=0; i<20; i++) 
         {
-            printf("%d ", array_mexidon[i]);
+            printf("%d ", array_generico[i]);
         }
     }   
     

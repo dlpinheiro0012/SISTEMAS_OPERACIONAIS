@@ -86,6 +86,16 @@ void init_vet_coef() {
 
 int main() {
     init_vet_coef();
+    pthread_t threads[NUM_THREADS];
+
+    for( int i = 0; i < NUM_THREADS; i++)
+    {
+        pthread_create(&threads[i], NULL, executar_thread, NULL);
+    }
+    for( int i = 0; i < NUM_THREADS; i++)
+    {
+
+    }
 
     pthread_barrier_init(&barreira, NULL, NUM_THREADS);
 
